@@ -8,7 +8,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <random>
-#include <matplotlibcpp.h> // need to install
+#include <matplotlibcpp.h>
 #include "cpp_nn_lr.h"
 
 
@@ -17,6 +17,7 @@
 // liner regression
 
 using namespace Eigen;
+namespace plt = matplotlibcpp;
 
 int main() {
 	// Data load Process
@@ -53,6 +54,9 @@ int main() {
 	for (int i = 0; i < n; ++i) {
 		list[i] = dist(engine);
 	}
+
+	plt::plot({ 1,3,2,4 });
+	plt::show();
 
 	/*
 	int input_dim = 2;
