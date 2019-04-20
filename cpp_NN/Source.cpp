@@ -8,7 +8,9 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <random>
+#ifndef DEBUG
 #include <matplotlibcpp.h>
+#endif
 #include "cpp_nn_lr.h"
 
 
@@ -17,7 +19,46 @@
 // liner regression
 
 using namespace Eigen;
+
+#ifndef DEBUG
 namespace plt = matplotlibcpp;
+#endif
+
+
+void generate_saple_data(int sample_size, int feature_dim, int num_classes, MatrixXd *v)
+{
+	static std::mt19937_64 mt64(0);
+	std::uniform_int_distribution<int> lavel(0, 1);
+	std::vector<int> list;
+	/**
+	for (int i = 0; i < v->rows(); i++) {
+		list[i] = lavel(mt64);
+	}
+	*/
+	// standard normal disribution
+	std::random_device seed;
+	std::mt19937 engine(seed());
+
+	double mu = 0.0, sig = 1.0;
+	// Initialize generation engine
+	std::normal_distribution<> dist(mu, sig);
+
+	// generate
+	for (int j = 0; j < v->cols(); j++) {
+		for (int i = 0; i < v->rows(); i++) {
+			(*v)(i,j) =(dist(engine) + 3);
+		}	
+	}
+
+	auto alc = std::allocator<double>();
+	std::vector<double> x1(v->col(0).data(), v->col(0).data()+v->col(0).rows());
+	std::vector<double> x2(v->col(1).data(), v->col(1).data() + v->col(1).rows());
+#ifndef DEBUG
+	plt::scatter(x1, x2, 10.0);
+	plt::show();
+#endif
+}
+
 
 int main() {
 	// Data load Process
@@ -38,25 +79,9 @@ int main() {
 	nn.liner_num_grad_weight(x1, t1, &dx1);
 	PRINT_MAT(dx1);
 
-	// standard normal disribution
-	
-	std::random_device seed;
-	std::mt19937 engine(seed());            
-
-	double mu = 0.0, sig = 1.0;
-	// Initialize generation engine
-	std::normal_distribution<> dist(mu, sig);
-
-	int n = 1000000;
-	std::vector<double> list(n);
-
-	// generate
-	for (int i = 0; i < n; ++i) {
-		list[i] = dist(engine);
-	}
-
-	plt::plot({ 1,3,2,4 });
-	plt::show();
+	MatrixXd sample_data = MatrixXd::Zero(32, 2);
+	generate_saple_data(0, 0, 0, &sample_data);
+	PRINT_MAT(sample_data);
 
 	/*
 	int input_dim = 2;
