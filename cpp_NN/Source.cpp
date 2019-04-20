@@ -25,16 +25,15 @@ namespace plt = matplotlibcpp;
 #endif
 
 
-void generate_saple_data(int sample_size, int feature_dim, int num_classes, MatrixXd *v)
+void generate_saple_data(MatrixXd *features, MatrixXd *lavels)
 {
-	static std::mt19937_64 mt64(0);
+	static std::mt19937 mt64(0);
 	std::uniform_int_distribution<int> lavel(0, 1);
-	std::vector<int> list;
-	/**
-	for (int i = 0; i < v->rows(); i++) {
-		list[i] = lavel(mt64);
+	int a = lavel(mt64);
+	
+	for (int i = 0; i < lavels->rows(); i++) {
+		(*lavels)(i,0) = lavel(mt64);
 	}
-	*/
 	// standard normal disribution
 	std::random_device seed;
 	std::mt19937 engine(seed());
@@ -44,19 +43,23 @@ void generate_saple_data(int sample_size, int feature_dim, int num_classes, Matr
 	std::normal_distribution<> dist(mu, sig);
 
 	// generate
-	for (int j = 0; j < v->cols(); j++) {
-		for (int i = 0; i < v->rows(); i++) {
-			(*v)(i,j) =(dist(engine) + 3);
+	for (int j = 0; j < features->cols(); j++) {
+		for (int i = 0; i < features->rows(); i++) {
+			(*features)(i,j) =(dist(engine) + 3)*((*lavels)(i, 0) +1);
 		}	
 	}
+}
 
-	auto alc = std::allocator<double>();
-	std::vector<double> x1(v->col(0).data(), v->col(0).data()+v->col(0).rows());
-	std::vector<double> x2(v->col(1).data(), v->col(1).data() + v->col(1).rows());
-#ifndef DEBUG
-	plt::scatter(x1, x2, 10.0);
-	plt::show();
-#endif
+int batch_train_sample(Liner_Reg *LR, MatrixXd *features, VectorXd *lavels, double learning_rate) {
+	assert(features->rows() == lavels->size());
+	for (int i = 0; i < features->rows(); i++) {
+		VectorXd feature = features->row(i);
+		int lavel = (*lavels)[i];
+		VectorXd dW = LR->W1.setZero().transpose();
+		LR->liner_num_grad_weight(feature, lavel, &dW);
+		LR->W1 = LR->W1 - (learning_rate*dW);
+		LR->b = LR->b - learning_rate * LR->liner_num_grad_bias(feature, lavel);
+	}
 }
 
 
@@ -79,27 +82,36 @@ int main() {
 	nn.liner_num_grad_weight(x1, t1, &dx1);
 	PRINT_MAT(dx1);
 
-	MatrixXd sample_data = MatrixXd::Zero(32, 2);
-	generate_saple_data(0, 0, 0, &sample_data);
-	PRINT_MAT(sample_data);
+	MatrixXd sample_features = MatrixXd::Zero(32, 2);
+	MatrixXd sample_lavels = MatrixXd::Zero(32, 1);
+	generate_saple_data(&sample_features, &sample_lavels);
 
-	/*
+#ifndef DEBUG // plot sample data
+	std::vector<double> sample_x1(sample_features.col(0).data(), sample_features.col(0).data() + sample_features.col(0).rows());
+	std::vector<double> sample_x2(sample_features.col(1).data(), sample_features.col(1).data() + sample_features.col(1).rows());
+	plt::scatter(sample_x1, sample_x2, 5.0);
+	plt::show();
+#endif
+
+
 	int input_dim = 2;
 	int iterate_num = 10000;
 	int lr = 0.1; // learning rate
+	VectorXd _sample_lavels = sample_lavels.col(0);
 
-	Liner_Reg nn(input_dim, 2);
+	// pick up sample data
+	std::cout << "before" << std::endl;
+	PRINT_MAT(nn.W1);
+	std::cout << nn.b << std::endl;
+	batch_train_sample(&nn, &sample_features, &_sample_lavels, lr);
+	std::cout << "after" << std::endl;
+	PRINT_MAT(nn.W1);
+	std::cout << nn.b << std::endl;
 
-	for (int i = 0; i < iterate_num; i++) {
-		Vector2d x1 = Vector2d::Zero(2);
-		int t1;
-		// allocate train data
 
-		// train the model
-		MatrixXd dW = nn.W1.setZero();
-		nn.liner_num_grad_weight(x1, t1, &dW);
-		nn.W1 = -dW;
-		nn.b = nn.b - lr*nn.liner_num_grad_bias(x1, t1);
-	}
-	*/
+	// allocate train data
+
+	// train the model
+
+
 }
