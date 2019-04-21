@@ -23,7 +23,7 @@ double cross_entropy_err(double x, double t)
 {
 	double delta = 1e-7;
 	double log_x = std::log(x + delta);
-	return t * log_x;
+	return -1* t * log_x;
 }
 
 // cross entopy should be scalar.

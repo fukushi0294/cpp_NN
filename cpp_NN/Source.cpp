@@ -55,9 +55,9 @@ int batch_train_sample(Liner_Reg *LR, MatrixXd *features, VectorXd *lavels, doub
 	for (int i = 0; i < features->rows(); i++) {
 		VectorXd feature = features->row(i);
 		int lavel = (*lavels)[i];
-		VectorXd dW = LR->W1.setZero().transpose();
+		VectorXd dW = VectorXd::Zero(LR->W1.rows());
 		LR->liner_num_grad_weight(feature, lavel, &dW);
-		LR->W1 = LR->W1 - (learning_rate*dW);
+		LR->W1 = LR->W1 - (dW*learning_rate);
 		LR->b = LR->b - learning_rate * LR->liner_num_grad_bias(feature, lavel);
 	}
 }
@@ -78,7 +78,7 @@ int main() {
 	double y = nn.liner_predict(x1.transpose());
 	double loss = nn.loss(x1, 1);
 
-	VectorXd dx1 = VectorXd::Random(2).cwiseAbs();
+	VectorXd dx1 = VectorXd::Zero(2).cwiseAbs();
 	nn.liner_num_grad_weight(x1, t1, &dx1);
 	PRINT_MAT(dx1);
 
@@ -96,7 +96,7 @@ int main() {
 
 	int input_dim = 2;
 	int iterate_num = 10000;
-	int lr = 0.1; // learning rate
+	double lr = 0.1; // learning rate
 	VectorXd _sample_lavels = sample_lavels.col(0);
 
 	// pick up sample data
