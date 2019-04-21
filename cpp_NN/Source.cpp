@@ -13,7 +13,6 @@
 #endif
 #include "cpp_nn_lr.h"
 
-
 #define PRINT_MAT(X) std::cout << #X << ":\n" << X << std::endl 
 
 // liner regression
@@ -22,10 +21,11 @@ using namespace Eigen;
 
 #ifndef DEBUG
 namespace plt = matplotlibcpp;
+std::vector<double> Loss;
 #endif
 
 
-void generate_saple_data(MatrixXd *features, MatrixXd *lavels)
+void generate_sample_data(MatrixXd *features, MatrixXd *lavels)
 {
 	static std::mt19937 mt64(0);
 	std::uniform_int_distribution<int> lavel(0, 1);
@@ -33,6 +33,12 @@ void generate_saple_data(MatrixXd *features, MatrixXd *lavels)
 	
 	for (int i = 0; i < lavels->rows(); i++) {
 		(*lavels)(i,0) = lavel(mt64);
+		if ((*lavels)(i, 0) == 0) {
+			(*lavels)(i, 1) = 1;
+		}
+		else {
+			(*lavels)(i, 1) = 0;
+		}
 	}
 	// standard normal disribution
 	std::random_device seed;
@@ -50,41 +56,50 @@ void generate_saple_data(MatrixXd *features, MatrixXd *lavels)
 	}
 }
 
-int batch_train_sample(Liner_Reg *LR, MatrixXd *features, VectorXd *lavels, double learning_rate) {
-	assert(features->rows() == lavels->size());
+
+void batch_train_sample(Liner_Reg *LR, MatrixXd *features, MatrixXd *lavels, double learning_rate) {
+	assert(features->rows() == lavels->rows());
 	for (int i = 0; i < features->rows(); i++) {
-		VectorXd feature = features->row(i);
-		int lavel = (*lavels)[i];
-		VectorXd dW = VectorXd::Zero(LR->W1.rows());
+		MatrixXd feature = features->row(i);
+		MatrixXd lavel = lavels->row(i).transpose();
+		MatrixXd dW = MatrixXd::Zero(LR->W1.rows(),LR->W1.cols());
 		LR->liner_num_grad_weight(feature, lavel, &dW);
 		LR->W1 = LR->W1 - (dW*learning_rate);
-		LR->b = LR->b - learning_rate * LR->liner_num_grad_bias(feature, lavel);
+		MatrixXd db = MatrixXd::Zero(LR->b.rows(), LR->b.cols());
+		LR->liner_num_grad_bias(feature, lavel, &db);
+		LR->b = LR->b - (db*learning_rate);
+#ifndef DEBUG
+		Loss.push_back(LR->loss(feature, lavel));
+#endif // !DEBUG
 	}
 }
 
-
 int main() {
 	// Data load Process
-
 	Liner_Reg nn(2, 2);
 	
-	std::cout << "bias : " << nn.b << std::endl;
 	PRINT_MAT(nn.W1);
+	PRINT_MAT(nn.b);
+	PRINT_MAT(nn.y);
 
 	srand((unsigned int)time(0));
-	Vector2d x1 = Vector2d::Random(2).cwiseAbs();
-	int t1 = 1;
+	MatrixXd x1 = MatrixXd::Random(1,2).cwiseAbs();
+	MatrixXd t1 = MatrixXd::Zero(2,1);
+	t1 << 0, 1;
+	
+	nn.liner_predict(x1);
+	PRINT_MAT(nn.y);
 
-	double y = nn.liner_predict(x1.transpose());
-	double loss = nn.loss(x1, 1);
+	double loss = nn.loss(x1,t1);
+	std::cout << "Loss : " << loss << std::endl;
 
-	VectorXd dx1 = VectorXd::Zero(2).cwiseAbs();
+	MatrixXd dx1 = MatrixXd::Zero(2, 2);
 	nn.liner_num_grad_weight(x1, t1, &dx1);
 	PRINT_MAT(dx1);
-
+	
 	MatrixXd sample_features = MatrixXd::Zero(32, 2);
-	MatrixXd sample_lavels = MatrixXd::Zero(32, 1);
-	generate_saple_data(&sample_features, &sample_lavels);
+	MatrixXd sample_lavels = MatrixXd::Zero(32, 2);
+	generate_sample_data(&sample_features, &sample_lavels);
 
 #ifndef DEBUG // plot sample data
 	std::vector<double> sample_x1(sample_features.col(0).data(), sample_features.col(0).data() + sample_features.col(0).rows());
@@ -93,25 +108,21 @@ int main() {
 	plt::show();
 #endif
 
-
 	int input_dim = 2;
 	int iterate_num = 10000;
 	double lr = 0.1; // learning rate
-	VectorXd _sample_lavels = sample_lavels.col(0);
 
-	// pick up sample data
-	std::cout << "before" << std::endl;
+	for (int i = 0; i<100; i++) {
+		generate_sample_data(&sample_features, &sample_lavels);
+		batch_train_sample(&nn, &sample_features, &sample_lavels, lr);
+	}
+
 	PRINT_MAT(nn.W1);
-	std::cout << nn.b << std::endl;
-	batch_train_sample(&nn, &sample_features, &_sample_lavels, lr);
-	std::cout << "after" << std::endl;
-	PRINT_MAT(nn.W1);
-	std::cout << nn.b << std::endl;
-
-
-	// allocate train data
-
-	// train the model
-
+	PRINT_MAT(nn.b);
+	
+#ifndef DEBUG
+	plt::plot(Loss);
+	plt::show();
+#endif
 
 }
