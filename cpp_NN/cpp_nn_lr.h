@@ -42,8 +42,9 @@ public:
 		for (int i = 0; i < this->W1.rows(); i++) {
 			for (int j = 0; j < this->W1.cols(); j++) {
 				double tmp = this->W1(i,j); //escape
+				this->W1(i, j) = tmp + h;
 				double tmp1 = this->loss(x, t);
-				this->W1(i,j) = tmp - h;
+				this->W1(i, j) = tmp - h;
 				double tmp2 = this->loss(x, t);
 				(*dw)(i,j) = (tmp1 - tmp2) / (2 * h);
 				this->W1(i,j) = tmp;
@@ -56,6 +57,7 @@ public:
 		for (int i = 0; i < this->b.rows(); i++) {
 			for (int j = 0; j < this->b.cols(); j++) {
 				double tmp = this->b(i, j); //escape
+				this->b(i, j) = tmp + h;
 				double tmp1 = this->loss(x, t);
 				this->b(i, j) = tmp - h;
 				double tmp2 = this->loss(x, t);

@@ -43,7 +43,7 @@ double cross_entropy_err(MatrixXd x, MatrixXd t)
 	MatrixXd log_x = (x.array() + delta).log();
 	for (int i = 0; i < t.rows(); i++) {
 		
-		err = +(t(i, 0)*log_x(i, 0));
+		err = err+(-1*t(i, 0)*log_x(i, 0));
 	}
 	return err;
 }

@@ -22,8 +22,8 @@ using namespace Eigen;
 #ifndef DEBUG
 namespace plt = matplotlibcpp;
 std::vector<double> Loss;
+std::vector<double> avgLoss;
 #endif
-
 
 void generate_sample_data(MatrixXd *features, MatrixXd *lavels)
 {
@@ -59,6 +59,7 @@ void generate_sample_data(MatrixXd *features, MatrixXd *lavels)
 
 void batch_train_sample(Liner_Reg *LR, MatrixXd *features, MatrixXd *lavels, double learning_rate) {
 	assert(features->rows() == lavels->rows());
+	double loss_batch = 0;
 	for (int i = 0; i < features->rows(); i++) {
 		MatrixXd feature = features->row(i);
 		MatrixXd lavel = lavels->row(i).transpose();
@@ -68,14 +69,47 @@ void batch_train_sample(Liner_Reg *LR, MatrixXd *features, MatrixXd *lavels, dou
 		MatrixXd db = MatrixXd::Zero(LR->b.rows(), LR->b.cols());
 		LR->liner_num_grad_bias(feature, lavel, &db);
 		LR->b = LR->b - (db*learning_rate);
-#ifndef DEBUG
-		Loss.push_back(LR->loss(feature, lavel));
-#endif // !DEBUG
+		loss_batch += LR->loss(feature, lavel);
 	}
+#ifndef DEBUG
+	Loss.push_back(loss_batch/features->rows());
+#endif // !DEBUG
 }
 
+#ifndef DEBUG
+static double print_training_progress(int mb, int frequency)
+{
+	double training_loss = 0;
+	if ((mb % frequency) == 0) {
+		training_loss = Loss[mb];
+	}
+	return training_loss;
+}
+
+std::vector<double> moving_average(std::vector<double> training_loss, int w=20) {
+	if (training_loss.size() < w) {
+		return training_loss;
+	}
+	std::vector<double> val;
+	for (int i=0; i < training_loss.size(); i++) {
+		if (i < w) {
+			val.push_back(training_loss[i]);
+		}
+		else {
+			double tmp_sum = 0;
+			for (int j = i-w ; j <= i; j++) {
+				tmp_sum += training_loss[j];
+			}
+			val.push_back(tmp_sum / w);
+		}
+	}
+	return val;
+}
+#endif // !DEBUG
+
+
 int main() {
-	// Data load Process
+	// Input random parameter
 	Liner_Reg nn(2, 2);
 	
 	PRINT_MAT(nn.W1);
@@ -90,15 +124,18 @@ int main() {
 	nn.liner_predict(x1);
 	PRINT_MAT(nn.y);
 
+	// Result before training
 	double loss = nn.loss(x1,t1);
 	std::cout << "Loss : " << loss << std::endl;
 
-	MatrixXd dx1 = MatrixXd::Zero(2, 2);
-	nn.liner_num_grad_weight(x1, t1, &dx1);
-	PRINT_MAT(dx1);
-	
-	MatrixXd sample_features = MatrixXd::Zero(32, 2);
-	MatrixXd sample_lavels = MatrixXd::Zero(32, 2);
+	int input_dim = 2;
+	int batchsize = 25;
+	int num_sample_to_train = 200000;
+	int iterate_num = num_sample_to_train/batchsize;
+	double lr = 0.1; // learning rate
+
+	MatrixXd sample_features = MatrixXd::Zero(batchsize, input_dim);
+	MatrixXd sample_lavels = MatrixXd::Zero(batchsize, input_dim);
 	generate_sample_data(&sample_features, &sample_lavels);
 
 #ifndef DEBUG // plot sample data
@@ -108,21 +145,61 @@ int main() {
 	plt::show();
 #endif
 
-	int input_dim = 2;
-	int iterate_num = 10000;
-	double lr = 0.1; // learning rate
-
-	for (int i = 0; i<100; i++) {
+	for (int i = 0; i<iterate_num; i++) {
 		generate_sample_data(&sample_features, &sample_lavels);
 		batch_train_sample(&nn, &sample_features, &sample_lavels, lr);
+#ifndef DEBUG
+		double ret = 0;
+		if ((ret=print_training_progress(i, 50) )!= 0) {
+			avgLoss.push_back(ret);
+		}
+#endif
 	}
 
 	PRINT_MAT(nn.W1);
 	PRINT_MAT(nn.b);
 	
+	MatrixXd feature = sample_features.row(0);
+	MatrixXd lavel = sample_lavels.row(0).transpose();
+	std::cout << "Final loss : " << nn.loss(feature, lavel) << std::endl;
+
 #ifndef DEBUG
-	plt::plot(Loss);
+	plt::plot(moving_average(avgLoss));
 	plt::show();
 #endif
+	
+	// Evalute model
+	MatrixXd eval_features = MatrixXd::Zero(batchsize, input_dim);
+	MatrixXd eval_lavels = MatrixXd::Zero(batchsize, input_dim);
+	MatrixXd predict_lavels = MatrixXd::Zero(batchsize, input_dim);
+	generate_sample_data(&eval_features, &eval_lavels);
+	for (int i = 0; i < batchsize; i++) {
+		nn.liner_predict(eval_features.row(i));
+		predict_lavels.row(i) = nn.y.transpose();
+	}
 
+	std::cout << "Lavels : [";
+	for (int i = 0; i < batchsize; i++) {
+		std::cout << eval_lavels(i, 0) << ", ";
+	}
+	std::cout << "]" << std::endl;
+
+	double accurerancy = 0;
+	std::cout << "Predicts : [";
+	for (int i = 0; i < batchsize; i++) {
+		int lavel = 0;
+		if (predict_lavels(i, 0) > 0.5) {
+			lavel = 1;
+		}
+		else {
+			lavel = 0;
+		}
+		std::cout << lavel << ", ";
+		if (lavel==eval_lavels(i,0))
+		{
+			accurerancy++;
+		}
+	}
+	std::cout << "]" << std::endl;
+	std::cout << "Accurerancy : " << accurerancy / batchsize << std::endl;
 }
