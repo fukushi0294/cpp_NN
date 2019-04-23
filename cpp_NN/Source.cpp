@@ -2,7 +2,6 @@
 #include <time.h>
 #include <math.h>
 #include <random>
-#include <fstream>
 #include <Eigen/Eigen>
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -63,12 +62,8 @@ void batch_train_sample(Liner_Reg *LR, MatrixXd *features, MatrixXd *lavels, dou
 	for (int i = 0; i < features->rows(); i++) {
 		MatrixXd feature = features->row(i);
 		MatrixXd lavel = lavels->row(i).transpose();
-		MatrixXd dW = MatrixXd::Zero(LR->W1.rows(),LR->W1.cols());
-		LR->liner_num_grad_weight(feature, lavel, &dW);
-		LR->W1 = LR->W1 - (dW*learning_rate);
-		MatrixXd db = MatrixXd::Zero(LR->b.rows(), LR->b.cols());
-		LR->liner_num_grad_bias(feature, lavel, &db);
-		LR->b = LR->b - (db*learning_rate);
+		LR->W1 -= learning_rate*LR->liner_num_grad_weight(feature, lavel);
+		LR->b -= learning_rate*LR->liner_num_grad_bias(feature, lavel);
 		loss_batch += LR->loss(feature, lavel);
 	}
 #ifndef DEBUG
@@ -120,6 +115,7 @@ int main() {
 	MatrixXd x1 = MatrixXd::Random(1,2).cwiseAbs();
 	MatrixXd t1 = MatrixXd::Zero(2,1);
 	t1 << 0, 1;
+	
 	
 	nn.liner_predict(x1);
 	PRINT_MAT(nn.y);

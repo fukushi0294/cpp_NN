@@ -1,12 +1,11 @@
 #pragma once
-
+#include <iostream>
 #include <math.h>
 #include <random>
 #include <time.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include "general_function.h"
-
 
 using namespace Eigen;
 
@@ -37,22 +36,25 @@ public:
 		return cross_entropy_err(this->y, t);
 	}
 
-	void liner_num_grad_weight(MatrixXd x, MatrixXd t, MatrixXd* dw) {
+	MatrixXd liner_num_grad_weight(MatrixXd x, MatrixXd t) {
+		MatrixXd dW = MatrixXd::Zero(this->W1.rows(), this->W1.cols());
 		double h = 1e-4;
 		for (int i = 0; i < this->W1.rows(); i++) {
 			for (int j = 0; j < this->W1.cols(); j++) {
-				double tmp = this->W1(i,j); //escape
+				double tmp = this->W1(i, j); //escape
 				this->W1(i, j) = tmp + h;
 				double tmp1 = this->loss(x, t);
 				this->W1(i, j) = tmp - h;
 				double tmp2 = this->loss(x, t);
-				(*dw)(i,j) = (tmp1 - tmp2) / (2 * h);
-				this->W1(i,j) = tmp;
+				dW(i, j) = (tmp1 - tmp2) / (2 * h);
+				this->W1(i, j) = tmp;
 			}
 		}
+		return dW;
 	}
 
-	void liner_num_grad_bias(MatrixXd x, MatrixXd t, MatrixXd* db) {
+	MatrixXd liner_num_grad_bias(MatrixXd x, MatrixXd t) {
+		MatrixXd db = MatrixXd::Zero(this->b.rows(), this->b.cols());
 		double h = 1e-4;
 		for (int i = 0; i < this->b.rows(); i++) {
 			for (int j = 0; j < this->b.cols(); j++) {
@@ -61,10 +63,11 @@ public:
 				double tmp1 = this->loss(x, t);
 				this->b(i, j) = tmp - h;
 				double tmp2 = this->loss(x, t);
-				(*db)(i, j) = (tmp1 - tmp2) / (2 * h);
+				db(i, j) = (tmp1 - tmp2) / (2 * h);
 				this->b(i, j) = tmp;
 			}
 		}
+		return db;
 	}
 
 private:
@@ -73,5 +76,5 @@ private:
 
 Liner_Reg::~Liner_Reg()
 {
-	
+
 }

@@ -139,6 +139,7 @@
   <ItemGroup>
     <ClInclude Include="cpp_nn_lr.h" />
     <ClInclude Include="general_function.h" />
+    <ClInclude Include="layer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
