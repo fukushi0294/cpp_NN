@@ -6,26 +6,52 @@
 class Relu
 {
 public:
-	Relu();
-	~Relu();
-	Eigen::MatrixXd forward();
-	Eigen::MatrixXd backward();
-private:
-	Eigen::MatrixXd mask;
+	template <class T> void forward(T& obj);
+	void forward(double& obj);
+	template <class T> void backward(T& obj);
 };
 
-Relu::Relu()
+template <class T> 
+void Relu::forward(T& obj) {
+	for (int i = 0; i < obj.rows(); i++) {
+		for (int j = 0; j < obj.cols(); j++)
+		{
+			if (obj(i, j) <= 0) {
+				obj(i, j) = 0;
+			}
+		}
+	}
+}
+
+void Relu::forward(double& obj) {
+	if (obj <= 0) {
+		obj = 0;
+	}
+}
+
+template <class T>
+void Relu::backward(T& obj) {
+	Relu::forward(obj);
+}
+
+class Sigmoid
 {
+public:
+	template <class T> void forward(T& obj);
+	void forward(double& obj);
+	template <class T> void backward(T& obj);
+};
+
+template <class T> 
+void Sigmoid::forward(T& obj) {
+	for (int i = 0; i < obj.rows(); i++) {
+		for (int j = 0; j < obj.cols(); j++) {
+			obj(i, j) = 1 / (1 + std::exp(obj(i, j)));
+		}
+	}
 }
 
-Relu::~Relu()
-{
+void Sigmoid::forward(double& obj) {
+	obj = 1 / (1 + std::exp(obj));
 }
 
-Eigen::MatrixXd Relu::forward() {
-
-}
-
-Eigen::MatrixXd Relu::backward() {
-
-}
